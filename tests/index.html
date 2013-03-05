@@ -1,0 +1,26 @@
+<html>
+  <head>
+    <title>DOM Binding Test</title>
+    <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+    <script src="http://code.jquery.com/qunit/qunit-1.11.0.js"></script>
+    <link href="http://code.jquery.com/qunit/qunit-1.11.0.css" rel="stylesheet" type="text/css" />
+
+    <script>
+      QUnit.config.autostart = false;
+    </script>
+
+    <script src="dom-binding-test.js"></script>
+  </head>
+  <body>
+  <div id="qunit"></div>
+  <div id="qunit-fixture">
+    <span id="bindable" class='bindable'>(waiting for bind...)</span>
+
+    <ul>
+      <li class='multi-bind'>One</li>
+      <li class='multi-bind'>Two</li>
+      <li class='multi-bind'>Three</li>
+    </ul>
+  </div>
+  </body>
+</html>
