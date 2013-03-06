@@ -2,18 +2,18 @@
   :plugins [[lein-cljsbuild "0.3.0"] ]
   :dependencies [[org.clojure/clojure "1.5.0"] [jayq "2.3.0"]]
   :cljsbuild {
-              :builds [{
-                        ; The path to the top-level ClojureScript source directory:
-                        :source-paths ["cljs"]
-                        ; The standard ClojureScript compiler options:
-                        ; (See the ClojureScript compiler documentation for details.)
-                        :compiler {
-                                   :output-to "dist.js"  ; default: target/cljsbuild-main.js
+              :builds [{:id "dist"
+                        :source-paths ["src/dom-binding"]
+                        :compiler {:output-to "dist/dom-binding.js"
+                                   :optimizations :simple
+                                   :pretty-print false}}
+                       {:id "debug"
+                        :source-paths ["src/dom-binding"]
+                        :compiler {:output-to "dist/debug.js"
                                    :optimizations :whitespace
                                    :pretty-print true}}
                        {:id "test"
-                        :source-paths ["cljs" "cljs-test"]
-                        :compiler {
-                                   :output-to "tests/dom-binding-test.js"
+                        :source-paths ["src/dom-binding" "src/tests"]
+                        :compiler {:output-to "tests/dom-binding-test.js"
                                    :optimizations :whitespace
                                    :pretty-print true}}]})
