@@ -8,7 +8,9 @@ Soon.
 
 ## Testing
 
-`lein cljsbuild auto test`
-`python -m SimpleHTTPServer`
+```sh
+lein cljsbuild auto test
+python -m SimpleHTTPServer
+```
 
 And navigate to `http://localhost:8000/tests`.
