@@ -21,25 +21,23 @@
 ;; Constructor for the dom map
 (defn create-dom-map 
   ([] {})
-  ([properties] (zipmap (keys properties) 
-                        (map (fn [value] {:content value}) (vals properties)))))
+  ([properties] (into {} (map (fn [[k v]] [k {:content v}]) properties))))
 
 ;; Utility function: update the dom for a property given its content and binding map
-(defn dom-update [property-content bind-map]
+(defn dom-update! [property-content bind-map]
     (let [el (clj->js (:element bind-map))
           type (:type bind-map)]
-      (cond
-        (= type :content)
+      (case type
+        :content
           (set! el/innerHTML ((:transform bind-map) property-content))
-        (= type :class)
+        :class
           (.addClass el property-content))))
 
 ;; Associates a property on the map.  
-(defn assoc-property [dom-map property value]
-  (let [new-map (assoc-in dom-map [property :content] value)]
-    (doseq [binding-item (get-in dom-map [property :bindings])]
-      (dom-update value binding-item))
-    new-map))
+(defn assoc-property! [dom-map property value]
+  (doseq [binding-item (get-in dom-map [property :bindings])]
+      (dom-update! value binding-item))
+  (assoc-in dom-map [property :content] value))
 
 ;; Shorthand for retrieving a property
 (defn get-property [dom-map property]
@@ -50,17 +48,17 @@
   (.querySelectorAll js/document (clj->js selector)))
 
 ;; Adds a binding to the dom-map.
-(defn add-dom-bind [dom-map property selector 
+(defn add-dom-bind! [dom-map property selector 
                     & {:keys [type transform]
                        :or {type :content 
-                            transform (fn [x] x)}}]
+                            transform identity}}]
   (let [nodes (selector->dom-nodes selector)]
-    (assoc-in dom-map [property :bindings] 
-              (concat (get-in dom-map [property :bindings])
-                      (doall (map 
-                               (fn [element] (let [bind {:element element 
-                                                         :type type 
-                                                         :transform transform}]
-                                               (dom-update (get-in dom-map [property :content]) bind)
-                                               bind))
-                               nodes))))))
+    (update-in dom-map [property :bindings]
+               concat (doall (map
+                               (fn [element] 
+                                 (let [bind {:element element 
+                                             :type type 
+                                             :transform transform}]
+                                   (dom-update! (get-in dom-map [property :content]) bind)
+                                   bind))
+                               nodes)))))
