@@ -1,5 +1,4 @@
 (ns dom-binding.core)
-  ;(:require [jayq.core :as jayq]))
 
 ; binding map that gets passed:
 ; {:color {:content "purple"
@@ -8,45 +7,60 @@
 ;                     :type :content or :class
 ;                     :transform fn [value] ()}}}
 
-(defn create-dom-binding 
+;; JavaScript's NodeList type is weird and not really an array, so Clojurescript doesn't add the seqable interface to it. Here's a manual implementation.
+(extend-type js/NodeList
+  ISeqable
+  (-seq [coll] (when (.item coll 0) coll))
+  
+  ISeq
+  (-first [coll] (.item coll 0))
+  (-rest [coll] 
+         (map (fn [i] (.item coll i))
+              (range 1 coll/length))))
+
+;; Constructor for the dom map
+(defn create-dom-map 
   ([] {})
-  ; wrap incoming properties in a map
   ([properties] (zipmap (keys properties) 
                         (map (fn [value] {:content value}) (vals properties)))))
-  
-(defn set-property [dom-mapping property value]
-  (let [new-mapping (assoc-in dom-mapping [property :content] value)]
-    (doseq [binding (get-in dom-mapping [property :bindings])]
-      (.log js/console "iterating over bindings"))
-    new-mapping))
 
+;; Utility function: update the dom for a property given its content and binding map
+(defn dom-update [property-content bind-map]
+    (let [el (clj->js (:element bind-map))
+          type (:type bind-map)]
+      (cond
+        (= type :content)
+          (set! el/innerHTML ((:transform bind-map) property-content))
+        (= type :class)
+          (.addClass el property-content))))
 
-; (defn ->dom-nodes [selector]
-;   ; possible types for selector:
-;   ;   element node - how is this represented? too bad i don't have a working repl...
-;   ;   element array - see above. should be a collection (.coll?) of element nodes?
-;   ;   jquery node - check jayq
-;   ;   jquery array of nodes - check jayq
-;   ;   selector - string (string?) or keyword (keyword?)
-;   (let [selector (js->clj selector)]
-;     (cond
-;       ; selector string or keyword
-;       (or (string? selector) (keyword? selector)) 
-;         (.querySelectorAll js/document (clj->js selector))
-;       ; NodeList (no-op)
-;       (= js/NodeList (type selector))
-;         selector
-;       ; assume jayq array. no easy way to check, really :I
-;       (coll? selector)
-;         )))
-      
-; temporary simplifed version that only takes a selector, not existing nodes      
-(defn ->dom-nodes [selector]
+;; Associates a property on the map.  
+(defn assoc-property [dom-map property value]
+  (let [new-map (assoc-in dom-map [property :content] value)]
+    (doseq [binding-item (get-in dom-map [property :bindings])]
+      (dom-update value binding-item))
+    new-map))
+
+;; Shorthand for retrieving a property
+(defn get-property [dom-map property]
+  (get-in dom-map [property :content]))
+
+;; Utility function: converts a selector to individual DOM nodes.     
+(defn selector->dom-nodes [selector]
   (.querySelectorAll js/document (clj->js selector)))
 
-(defn bind [dom-mapping property selector 
-            & {:keys [type transform]
-            :or {type :content 
-                 transform (fn [x] x)}}]
-  (let [nodes (->dom-nodes selector)]
-    {:element the-node :type type :transform transform}))
+;; Adds a binding to the dom-map.
+(defn add-dom-bind [dom-map property selector 
+                    & {:keys [type transform]
+                       :or {type :content 
+                            transform (fn [x] x)}}]
+  (let [nodes (selector->dom-nodes selector)]
+    (assoc-in dom-map [property :bindings] 
+              (concat (get-in dom-map [property :bindings])
+                      (doall (map 
+                               (fn [element] (let [bind {:element element 
+                                                         :type type 
+                                                         :transform transform}]
+                                               (dom-update (get-in dom-map [property :content]) bind)
+                                               bind))
+                               nodes))))))
